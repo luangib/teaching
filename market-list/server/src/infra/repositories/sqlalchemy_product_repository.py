@@ -115,3 +115,50 @@ class SqlAlchemyProductRepository(ProductRepository):
             raise
         finally:
             session.close()
+
+    # --- NOVO MÉTODO ADICIONADO AQUI ---
+    def update(self, product: Product) -> Product:
+        """
+        Atualiza um produto existente no banco de dados.
+        
+        Args:
+            product (Product): A entidade de domínio 'Product' 
+                               com os valores atualizados.
+        
+        Returns:
+            Product: A entidade de domínio atualizada após a persistência.
+        """
+        session = self._session_factory()
+        try:
+            # 1. Encontra o modelo no banco de dados pelo ID
+            model = (
+                session.query(ProductModel)
+                .filter(ProductModel.id == product.id)
+                .first()
+            )
+
+            if not model:
+                # 2. Levanta um erro se não encontrar
+                raise ValueError(f"Produto com id {product.id} não encontrado para atualizar.")
+
+            # 3. Atualiza os campos do modelo com os valores do objeto de domínio
+            #    (O UseCase já alterou 'quantidade' e 'valor' no objeto 'product')
+            model.quantidade = product.quantidade
+            model.valor = product.valor
+            
+            # 4. Comita a transação
+            session.commit()
+            
+            # 5. Refresca o modelo (para pegar dados do DB, se houver triggers)
+            session.refresh(model)
+            
+            # 6. Retorna o objeto de domínio atualizado
+            return product_mapper.to_domain(model)
+        
+        except Exception:
+            # 7. Rollback em caso de erro
+            session.rollback()
+            raise
+        finally:
+            # 8. Fecha a sessão
+            session.close()

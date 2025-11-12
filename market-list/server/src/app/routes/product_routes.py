@@ -9,14 +9,18 @@ from src.app.schemas import (
     ProdutoDelSchema,
     ProdutoSchema,
     ProdutoViewSchema,
+
     apresenta_produto,
     apresenta_produtos,
 )
+from src.app.schemas.product import ProdutoUpdateSchema
 from src.core.exceptions import ProductAlreadyExists, ProductNotFound
 from src.core.use_cases.add_product import AddProductUseCase
 from src.core.use_cases.delete_product import DeleteProductUseCase
 from src.core.use_cases.get_product import GetProductUseCase
 from src.core.use_cases.list_products import ListProductsUseCase
+# <--- MUDANÇA: Importa o novo use case
+from src.core.use_cases.update_product import UpdateProductUseCase
 
 produto_tag = Tag(
     name="Produto",
@@ -30,6 +34,7 @@ def register_product_routes(
     list_use_case: ListProductsUseCase,
     get_use_case: GetProductUseCase,
     delete_use_case: DeleteProductUseCase,
+    update_use_case: UpdateProductUseCase,  # <--- MUDANÇA: Adiciona o novo use case
 ) -> None:
     @app.post(
         "/produto",
@@ -86,3 +91,35 @@ def register_product_routes(
             return {"mesage": "Produto removido", "nome": nome}, 200
         except ProductNotFound as error:
             return {"mesage": str(error)}, 404
+
+    # <--- MUDANÇA: Rota PUT inteira adicionada ---
+    @app.put(
+        '/produto',
+        tags=[produto_tag],
+        summary="Atualiza a quantidade e o valor de um produto",
+        responses={
+            "200": ProdutoViewSchema,
+            "404": ErrorSchema,
+            "400": ErrorSchema,
+        },
+    )
+    def update_produto(
+        query: ProdutoBuscaPorNomeSchema,  # Busca pelo nome (na URL)
+        body: ProdutoUpdateSchema        # Pega dados do body
+    ):
+        """
+        Atualiza um produto existente (quantidade e valor)
+        buscando pelo nome.
+        """
+        nome = unquote(unquote(query.nome))
+        try:
+            produto = update_use_case.execute(
+                nome=nome,
+                quantidade=body.quantidade,
+                valor=body.valor
+            )
+            return apresenta_produto(produto), 200
+        except ProductNotFound as error:
+            return {"mesage": str(error)}, 404
+        except Exception as e:
+            return {"mesage": f"Não foi possível atualizar o item: {e}"}, 400

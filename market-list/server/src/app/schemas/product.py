@@ -63,11 +63,13 @@ def apresenta_produto(produto: Product) -> dict:
     }
 
 
+# Em 'apresenta_produtos':
 def apresenta_produtos(produtos: List[Product]) -> dict:
     """Converte a lista de produtos para resposta JSON."""
     return {
         "produtos": [
             {
+                "id": produto.id,  # <--- ADICIONE ESTA LINHA
                 "nome": produto.nome,
                 "quantidade": produto.quantidade,
                 "valor": produto.valor,
@@ -75,3 +77,10 @@ def apresenta_produtos(produtos: List[Product]) -> dict:
             for produto in produtos
         ]
     }
+
+# Em 'ProdutoUpdateSchema':
+class ProdutoUpdateSchema(BaseModel):
+    """Payload esperado para atualização (PUT) de um produto."""
+    nome: str  # <--- ADICIONE ESTA LINHA
+    quantidade: int
+    valor: float
